@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Dev Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header class="search">
+        <input id="username" placeholder="GitHub username">
+        <button id="load">Load</button>
+        <button id="refresh" title="Bypass cache">↻</button>
+        <span id="cache-note"></span>
+    </header>
+    <p id="error" class="error" hidden></p>
+
+    <main id="app" hidden>
+        <section class="profile">
+            <img id="avatar" alt="">
+            <div>
+                <h1 id="name"></h1>
+                <p id="bio"></p>
+                <div class="stats">
+                    <span>👥 <b id="followers"></b> followers</span>
+                    <span>⭐ <b id="stars"></b> stars</span>
+                    <span>🍴 <b id="forks"></b> forks</span>
+                    <span>🔥 <b id="cur-streak">0</b>d streak · best <b id="best-streak">0</b>d</span>
+                </div>
+            </div>
+            <div id="match-badge" class="badge" hidden></div>
+            <div class="pie-wrap">
+                <div id="pie"></div>
+                <ul id="legend"></ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>Contributions <small id="contrib-total"></small></h2>
+            <div id="heatmap"></div>
+            <p id="token-note" class="muted" hidden>Add GITHUB_TOKEN to the server to enable the heatmap.</p>
+        </section>
+
+        <section class="vibe">
+            <h2>Tech Stack Compatibility</h2>
+            <textarea id="jd" rows="5" placeholder="Paste a job description..."></textarea>
+            <button id="match-btn">Check match</button>
+            <button id="pitch-btn">Generate pitch</button>
+            <div id="match-detail"></div>
+            <blockquote id="pitch" hidden></blockquote>
+        </section>
+
+        <section>
+            <h2>Repositories</h2>
+            <div id="repos" class="grid"></div>
+        </section>
+
+        <section class="chat">
+            <h2>Ask my portfolio</h2>
+            <div id="chat-log"></div>
+            <form id="chat-form"><input id="chat-input"
+                    placeholder="e.g. What have they built in Python?"><button>Ask</button></form>
+        </section>
+    </main>
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>
