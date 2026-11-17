@@ -1,0 +1,103 @@
+const $ = (id) => document.getElementById(id);
+const COLORS = ["#4c8bf5", "#f5a623", "#7ed321", "#bd10e0", "#50e3c2", "#e94b6a"];
+let user = "";
+
+async function api(path, opts) {
+  const r = await fetch(`/api/profile/${path}`, {
+    headers: { "Content-Type": "application/json" }, ...opts,
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || "Request failed");
+  return data;
+}
+const post = (path, body) => api(path, { method: "POST", body: JSON.stringify(body) });
+
+function showError(msg) { $("error").hidden = !msg; $("error").textContent = msg || ""; }
+
+function renderMatch(m) {
+  const badge = $("match-badge");
+  if (!m) { badge.hidden = true; return; }
+  badge.hidden = false;
+  badge.textContent = `${m.percentage}% · ${m.label}`;
+  badge.dataset.tier = m.percentage >= 60 ? "good" : m.percentage >= 35 ? "mid" : "low";
+  $("match-detail").innerHTML =
+    `<p>✅ Matched: ${m.matched.join(", ") || "none"}</p>
+     <p>❌ Missing: ${m.missing.join(", ") || "none"}</p>`;
+}
+
+function renderPie(langs) {
+  let acc = 0;
+  const stops = langs.map((l, i) => {
+    const s = `${COLORS[i]} ${acc}% ${acc + l.percent}%`; acc += l.percent; return s;
+  });
+  $("pie").style.background = `conic-gradient(${stops.join(",")})`;
+  $("legend").innerHTML = langs.map((l, i) =>
+    `<li><i style="background:${COLORS[i]}"></i>${l.language} ${l.percent}%</li>`).join("");
+}
+
+function renderRepos(repos) {
+  $("repos").innerHTML = repos.map((r) => `
+    <a class="card" href="${r.html_url}" target="_blank" rel="noopener">
+      <h3>${esc(r.name)}</h3>
+      <p>${esc(r.description || "No description")}</p>
+      <footer>${r.language ? `<span class="tag">${esc(r.language)}</span>` : ""}
+        <span>⭐ ${r.stars}</span><span>🍴 ${r.forks}</span></footer>
+    </a>`).join("");
+}
+
+function renderHeatmap(c) {
+  $("token-note").hidden = !c.token_missing;
+  $("contrib-total").textContent = c.total ? `${c.total} in the last year` : "";
+  $("cur-streak").textContent = c.current_streak;
+  $("best-streak").textContent = c.longest_streak;
+  const first = c.cells.length ? new Date(c.cells[0].day).getUTCDay() : 0;
+  $("heatmap").innerHTML = "<i></i>".repeat(first) + c.cells.map((d) =>
+    `<i class="l${d.level}" title="${d.count} on ${d.day}"></i>`).join("");
+}
+
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function load(refresh = false) {
+  user = $("username").value.trim();
+  if (!user) return;
+  showError("");
+  try {
+    const q = refresh ? "?refresh=true" : "";
+    const [p, c] = await Promise.all([api(user + q), api(`${user}/contributions${q}`)]);
+    const pr = p.profile;
+    $("avatar").src = pr.avatar_url; $("name").textContent = pr.name;
+    $("bio").textContent = pr.bio || "";
+    $("followers").textContent = pr.followers; $("stars").textContent = pr.total_stars;
+    $("forks").textContent = pr.total_forks;
+    $("cache-note").textContent = p.from_cache ? "⚡ served from cache" : "🌐 fresh from GitHub";
+    $("jd").value = p.job_description || "";
+    renderPie(pr.top_languages); renderRepos(p.repos); renderHeatmap(c); renderMatch(p.match);
+    $("app").hidden = false;
+  } catch (e) { showError(e.message); $("app").hidden = true; }
+}
+
+$("load").onclick = () => load();
+$("refresh").onclick = () => load(true);
+$("username").onkeydown = (e) => e.key === "Enter" && load();
+
+$("match-btn").onclick = async () => {
+  try { showError(""); renderMatch(await post(`${user}/match`, { job_description: $("jd").value })); }
+  catch (e) { showError(e.message); }
+};
+$("pitch-btn").onclick = async () => {
+  try {
+    showError("");
+    const r = await post(`${user}/pitch`, { job_description: $("jd").value });
+    renderMatch(r.match); $("pitch").hidden = false; $("pitch").textContent = r.pitch;
+  } catch (e) { showError(e.message); }
+};
+$("chat-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const q = $("chat-input").value.trim(); if (!q) return;
+  $("chat-input").value = "";
+  $("chat-log").insertAdjacentHTML("beforeend", `<p class="me">${esc(q)}</p>`);
+  try {
+    const r = await post(`${user}/chat`, { question: q });
+    $("chat-log").insertAdjacentHTML("beforeend", `<p class="bot">${esc(r.answer)}</p>`);
+  } catch (err) { showError(err.message); }
+};
